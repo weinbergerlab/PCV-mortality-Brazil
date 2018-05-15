@@ -496,4 +496,4 @@ write.csv(rr.bma,paste0('./output_STL/rr.bma.' ,SES_VAR,'.csv'))
 write.csv(rr.bma,paste0('./output_STL/rr.pca.' ,SES_VAR,'.csv'))
 
 rr.pca
-rr.bma
+#rr.bma
