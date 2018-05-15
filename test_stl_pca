@@ -55,7 +55,7 @@ d1$A00_A09<-NULL
 d1$age_group<-gsub("[[:punct:]]", "_", d1$age_group)
 ############################################  
 
-output_directory<-paste0(getwd(),'/output_STL/')
+output_directory<-paste0(getwd(),'/output_STL/','SES_VAR','/')
 dir.create(output_directory, recursive=TRUE, showWarnings = FALSE)
 
 
