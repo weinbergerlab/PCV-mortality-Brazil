@@ -43,7 +43,7 @@ bivariate=FALSE  #two control variables or 1 in regression?
 season.control='dummy'  #can either by 'harmonic' or 'dummy'
 N.buffer=24 #How many months before start evaluation?
 random.season=0 #Should seasonal dummy in PCA model be random effect? 1=random;0=fixed
-SES_VAR='education'  #Can be: "poverty", "education", "income", "national
+SES_VAR='education'  #Can be: "poverty", "education", "HDI", "national
 #################################################
 #IMPORT DATA 
 #(sample data pulled directly from github)
