@@ -33,6 +33,7 @@ source_url("https://raw.githubusercontent.com/weinbergerlab/Brazil_state/master/
 country="Brazil_mort"
 all_cause_name <- 'NoPCV'
 all_cause_pneu_name <- 'J12_J18'
+strata_name<-"age_group"
 date_name<-'date'
 data_start_date <- as.Date('2004-01-01')   #When do you want the analysis to start? (yyyy-mm-01)
 data_intervention_start<-as.Date('2010-01-01')   #When is the intervention introduced?  (yyyy-mm-01)
@@ -42,7 +43,7 @@ bivariate=FALSE  #two control variables or 1 in regression?
 season.control='dummy'  #can either by 'harmonic' or 'dummy'
 N.buffer=24 #How many months before start evaluation?
 random.season=0 #Should seasonal dummy in PCA model be random effect? 1=random;0=fixed
-SES_VAR='poverty'  #Can be: "poverty", "education", "income", "national
+SES_VAR='education'  #Can be: "poverty", "education", "income", "national
 #################################################
 #IMPORT DATA 
 #(sample data pulled directly from github)
@@ -53,6 +54,10 @@ d1$date<-mdy(d1$date)
 d1$J09_J18<-NULL
 d1$A00_A09<-NULL
 d1$age_group<-gsub("[[:punct:]]", "_", d1$age_group)
+all_names<-names(d1)
+first.three<-c(strata_name,date_name,all_cause_pneu_name)
+all_covar_names<- all_names [! all_names %in% first.three]
+d1<-d1[,c(first.three,all_covar_names)]
 ############################################  
 
 output_directory<-paste0(getwd(),'/output_STL/','SES_VAR','/')
