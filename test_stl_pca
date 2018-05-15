@@ -464,7 +464,7 @@ mods.covars<-names(covars)
 format.mods.covars<-paste(round(rr.mean.post.mod,2) )
 
 col.plot<-rgb(0,0,0, alpha=model_weights_2)
-aic.df<-aic.df[order(aic.df$model.rank),]
+#aic.df<-aic.df[order(aic.df$model.rank),]
 plot.order<-aic.df$model.rank
 n.plot<-sum(aic.df$keep.high.weight) #how many covars contriubuted to 99% of weight?
 n.plot<-min(n.plot,50) #limit to number of lines plotted
