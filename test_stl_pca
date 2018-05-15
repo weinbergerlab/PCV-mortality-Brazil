@@ -455,30 +455,33 @@ title("Predictions from individual variables; weighted by fit")
 
 dev.off()
 
-
-
 ## MAKE THE INTERACTIVE PLOTLY PLOTS
-model_weights_2<-aic.df$w_aic
-model_weights_2[aic.df$w_aic<0.03]=0.03 #set a minimum threshold for weights so that even 0 weighted lines show up faintly
+aic.df<-aic.df[order(aic.df$model.rank),]
+aic.df.plot<-aic.df[aic.df$covars %in% c('t',top.covars), ]
+aic.df.plot$model.rank=rank(aic.df.plot$model.rank)
+model_weights_2<-aic.df.plot$w_aic
+model_weights_2[aic.df.plot$w_aic<0.03]=0.03 #set a minimum threshold for weights so that even 0 weighted lines show up faintly
 mods.covars<-names(covars)
 format.mods.covars<-paste(round(rr.mean.post.mod,2) )
 
 col.plot<-rgb(0,0,0, alpha=model_weights_2)
-#aic.df<-aic.df[order(aic.df$model.rank),]
-plot.order<-aic.df$model.rank
-n.plot<-sum(aic.df$keep.high.weight) #how many covars contriubuted to 99% of weight?
+plot.order<- aic.df.plot$model.rank
+n.plot<-sum(aic.df.plot$keep.high.weight) #how many covars contriubuted to 99% of weight?
 n.plot<-min(n.plot,50) #limit to number of lines plotted
 outcome.list<-outcome
+pred.mean.plot<-as.data.frame(pred.mean)
+names(pred.mean.plot)<-dimnames(predictors)[[2]]
+  
 plotlies <- plot_ly(x = ~time_points, y = ~outcome.list, type = 'scatter', mode = 'markers')%>%
   layout(
     yaxis=list(rangemode='tozero')
   )
 
 for(i in 1:n.plot ) {
-  j<-which(plot.order==i)
-  plotlies <- add_trace(plotlies,x=time_points,y = pred.mean[,j] ,name = mods.covars[j],  mode = "lines",
-                        evaluate = TRUE,line = list(color = col.plot[j]),  hoverinfo = 'text',
-                        text = paste0(mods.covars[j]," RR:",format.mods.covars[j]," Weight ",round(aic.df$w_aic,2)[j]))  
+  cov.plot<-as.character(aic.df.plot$covars[i])
+  plotlies <- add_trace(plotlies,x=time_points,y = pred.mean.plot[,cov.plot] ,name = cov.plot,  mode = "lines",
+                        evaluate = TRUE,line = list(color = col.plot[i]),  hoverinfo = 'text',
+                        text = paste0(cov.plot," Weight ",round(aic.df.plot$w_aic,2)[i]))  
 }           
 out.html<-file.path( paste0(output_directory,'plottly.plots.', country,strata.label, SES_VAR, '.html'))
 htmlwidgets::saveWidget(plotlies, out.html)
