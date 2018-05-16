@@ -486,6 +486,10 @@ for(i in 1:n.plot ) {
                         evaluate = TRUE,line = list(color = col.plot[i]),  hoverinfo = 'text',
                         text = paste0(cov.plot," RR:", rr.post.covar.round[i], " Weight ",round(aic.df.plot$w_aic,2)[i]))  
 }           
+plotlies <- add_trace(plotlies,x=time_points,y = preds.q.pca[,'50%'] ,name = "STL+PCA",  mode = "lines",
+                      evaluate = TRUE,line = list(color = 'red'),  hoverinfo = 'text',
+                      text = paste0('STL+PCA', " RR:",round(rr.mean.post.mod.pca['50%'],2) ))  
+
 out.html<-file.path( paste0(output_directory,'plottly.plots.', country,strata.label, SES_VAR, '.html'))
 htmlwidgets::saveWidget(plotlies, out.html)
 
