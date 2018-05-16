@@ -43,7 +43,7 @@ bivariate=FALSE  #two control variables or 1 in regression?
 season.control='dummy'  #can either by 'harmonic' or 'dummy'
 N.buffer=24 #How many months before start evaluation?
 random.season=0 #Should seasonal dummy in PCA model be random effect? 1=random;0=fixed
-SES_VAR='education'  #Can be: "poverty", "education", "HDI", "national
+SES_VAR='education'  #Can be: "poverty", "education", "HDI", "national"
 #################################################
 #IMPORT DATA 
 #(sample data pulled directly from github)
@@ -53,6 +53,7 @@ d1$pop<-NULL
 d1$date<-mdy(d1$date)
 d1$J09_J18<-NULL
 d1$A00_A09<-NULL
+d1$G00_G09<-NULL
 d1$age_group<-gsub("[[:punct:]]", "_", d1$age_group)
 all_names<-names(d1)
 first.three<-c(strata_name,date_name,all_cause_pneu_name)
@@ -60,7 +61,7 @@ all_covar_names<- all_names [! all_names %in% first.three]
 d1<-d1[,c(first.three,all_covar_names)]
 ############################################  
 
-output_directory<-paste0(getwd(),'/output_STL/','SES_VAR','/')
+output_directory<-paste0(getwd(),'/output_STL/',SES_VAR,'/')
 dir.create(output_directory, recursive=TRUE, showWarnings = FALSE)
 
 
@@ -349,6 +350,7 @@ for(k in 1:length(reg.names)){
   post.rr<-post.obs.sum/post.preds.sums
   rr.post.q[[k]]<-quantile(post.rr,probs=c(0.025,0.5,0.975))            
   rr.mean.post.mod<-rr.post.q[[k]]
+  
   #Pointwise CIs
   log_rr_full_t<-log((outcome+0.5)/(all.preds+0.5))
   log_rr_full_t_quantiles<-apply(log_rr_full_t,1, quantile, probs=c(0.025,0.5,0.975))
@@ -356,8 +358,8 @@ for(k in 1:length(reg.names)){
   log_rr_full_t_samples.covar<-cov(t(log_rr_full_t))
   log_rr_full_t_samples.prec<-solve(log_rr_full_t_samples.covar)
   
-  #rr for each model
   rr.post.covar<-  post.obs.sum/apply(pred.mean[eval.start.index:nrow(all.preds),],2,sum)
+  rr.post.covar<- setNames(rr.post.covar, dimnames(predictors)[[2]])
   
   ###SETUP AND RUN MODELS WITH FIRST PC
   covars.keep.pca<-covars[,top.covars]
@@ -371,7 +373,7 @@ for(k in 1:length(reg.names)){
     covar.matrix.pca<-cbind.data.frame(outcome.pre,sint1, cost1, predictors2)
   }
   covar.matrix.pca$obs<-as.factor(1:nrow(covar.matrix.pca))
-  covar.matrix.pca$month.fac<-as.factor(x)
+  covar.matrix.pca$month.fac<-as.factor(seas.var)
   
   if(season.control != 'dummy'){random.season=0} #if use harmonic, can't use random effect for season
   if(random.season==0){
@@ -458,6 +460,8 @@ title("Predictions from individual variables; weighted by fit")
 
 dev.off()
 
+
+
 ## MAKE THE INTERACTIVE PLOTLY PLOTS
 aic.df<-aic.df[order(aic.df$model.rank),]
 aic.df.plot<-aic.df[aic.df$covars %in% c('t',top.covars), ]
@@ -466,7 +470,7 @@ model_weights_2<-aic.df.plot$w_aic
 model_weights_2[aic.df.plot$w_aic<0.03]=0.03 #set a minimum threshold for weights so that even 0 weighted lines show up faintly
 mods.covars<-names(covars)
 format.mods.covars<-paste(round(rr.mean.post.mod,2) )
-rr.post.covar.round<-round( rr.post.covar,2)
+
 col.plot<-rgb(0,0,0, alpha=model_weights_2)
 plot.order<- aic.df.plot$model.rank
 n.plot<-sum(aic.df.plot$keep.high.weight) #how many covars contriubuted to 99% of weight?
@@ -479,17 +483,18 @@ plotlies <- plot_ly(x = ~time_points, y = ~outcome.list, type = 'scatter', mode 
   layout(
     yaxis=list(rangemode='tozero')
   )
-plotlies <- add_trace(plotlies,x=time_points,y = pred.mean.plot[,cov.plot] ,name = cov.plot,  mode = "lines",
+
+for(i in 1:n.plot ) {
+  cov.plot<-as.character(aic.df.plot$covars[i])
+  format.rr.covars<-paste(round(rr.post.covar[cov.plot],2) )
+  
+  plotlies <- add_trace(plotlies,x=time_points,y = pred.mean.plot[,cov.plot] ,name = cov.plot,  mode = "lines",
                         evaluate = TRUE,line = list(color = col.plot[i]),  hoverinfo = 'text',
-                        text = paste0(cov.plot," RR:", rr.post.covar.round[i], " Weight ",round(aic.df.plot$w_aic,2)[i]))  
+                        text = paste0(cov.plot, " RR:", format.rr.covars," Weight ",round(aic.df.plot$w_aic,2)[i]))  
+}           
 plotlies <- add_trace(plotlies,x=time_points,y = preds.q.pca[,'50%'] ,name = "STL+PCA",  mode = "lines",
                       evaluate = TRUE,line = list(color = 'red'),  hoverinfo = 'text',
                       text = paste0('STL+PCA', " RR:",round(rr.mean.post.mod.pca['50%'],2) ))  
-for(i in 1:n.plot ) {
-  cov.plot<-as.character(aic.df.plot$covars[i])
-}           
-
-
 out.html<-file.path( paste0(output_directory,'plottly.plots.', country,strata.label, SES_VAR, '.html'))
 htmlwidgets::saveWidget(plotlies, out.html)
 
