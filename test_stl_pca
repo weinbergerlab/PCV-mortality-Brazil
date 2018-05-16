@@ -11,7 +11,7 @@ require(abind)
 source_url("https://raw.githubusercontent.com/weinbergerlab/Brazil_hospital_state/master/functions%20glm%20aic%20mod%20ave.R")      
 #source('functions glm aic mod ave.R')
 
-packages <- c('RCurl','reshape2','RColorBrewer','matlib','lme4', 'dummy','knitr','plotly','MASS', 'parallel','splines', 'lubridate','devtools')
+packages <- c('RCurl','reshape2','RColorBrewer','matlib','lme4','rstanarm', 'dummy','knitr','plotly','MASS', 'parallel','splines', 'lubridate','devtools')
 packageHandler(packages, update_packages = FALSE, install_packages = FALSE) #change to true if need to install any
 sapply(packages, library, quietly = TRUE, character.only = TRUE)
 
@@ -43,7 +43,7 @@ bivariate=FALSE  #two control variables or 1 in regression?
 season.control='dummy'  #can either by 'harmonic' or 'dummy'
 N.buffer=24 #How many months before start evaluation?
 random.season=0 #Should seasonal dummy in PCA model be random effect? 1=random;0=fixed
-SES_VAR='education'  #Can be: "poverty", "education", "HDI", "national"
+SES_VAR='HDI'  #Can be: "poverty", "education", "HDI", "national"
 #################################################
 #IMPORT DATA 
 #(sample data pulled directly from github)
@@ -378,13 +378,13 @@ for(k in 1:length(reg.names)){
   if(season.control != 'dummy'){random.season=0} #if use harmonic, can't use random effect for season
   if(random.season==0){
     form.pca<-as.formula(paste0('outcome.pre~',paste(names(season.dummies), collapse="+") ,'+pca1 +(1|obs)'  ) )
-    mod1<-glmer(form.pca ,data=covar.matrix.pca, family='poisson',control=glmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5)) )
-    all.preds.pca<-simulate(mod1, nsim=10000, newdata=covar.matrix.pca, allow.new.levels=TRUE,re.form= NA)
-  }else{
-    form.pca<-as.formula(paste0('outcome.pre~','pca1 +(1|obs) +(1|month.fac)'  )  )
-    mod1<-glmer(form.pca ,data=covar.matrix.pca, family='poisson',control=glmerControl(optimizer="bobyqa",
-                                                                                       optCtrl=list(maxfun=2e5)) )
-    all.preds.pca<-simulate(mod1, nsim=10000, newdata=covar.matrix.pca, allow.new.levels=TRUE,re.form= ~(1|month.fac))
+    stan_mod<- stan_glmer(form.pca, data=covar.matrix.pca, cores=4, chains=4 , family=poisson(link='log'))
+    all.preds.pca<- t(posterior_predict(stan_mod, newdata=covar.matrix.pca[,-1]))
+    }else{
+      form.pca<-as.formula(paste0('outcome.pre~','pca1 +(1|obs) +(1|month.fac)'  )  )    
+      # form.pca<-as.formula(paste0('outcome.pre~',paste(names(season.dummies), collapse="+") ,'+pca1 +(1|obs)'  ) )
+      all.preds.pca<- t(posterior_predict(stan_mod, newdata=covar.matrix.pca[,-1]),re.form= ~(1|month.fac))
+     all.preds.pca<-simulate(mod1, nsim=10000, newdata=covar.matrix.pca, allow.new.levels=TRUE,re.form= ~(1|month.fac))
 }
 preds.q.pca<-t(apply(all.preds.pca, 1,quantile, probs=c(0.025,0.5,0.975)))
 rr.post.t.pca[[k]]<- outcome/preds.q.pca
