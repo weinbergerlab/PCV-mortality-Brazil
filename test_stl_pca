@@ -42,10 +42,11 @@ N.sim=10000 #total number of random draws for the predictive distribution
 bivariate=FALSE  #two control variables or 1 in regression?
 season.control='dummy'  #can either by 'harmonic' or 'dummy'
 N.buffer=24 #How many months before start evaluation?
-random.season=0 #Should seasonal dummy in PCA model be random effect? 1=random;0=fixed
 SES_VAR='HDI'  #Can be: "poverty", "education", "HDI", "national"
 #################################################
 #IMPORT DATA 
+random.season=0 #Should seasonal dummy in PCA model be random effect? 1=random;0=fixed DO NOT CHANGE
+
 #(sample data pulled directly from github)
 git.data= getURL(paste0("https://raw.githubusercontent.com/weinbergerlab/PCV-mortality-Brazil/master/", SES_VAR, ".csv"))    
 d1 <- read.csv(text=git.data)
@@ -378,126 +379,136 @@ for(k in 1:length(reg.names)){
   if(season.control != 'dummy'){random.season=0} #if use harmonic, can't use random effect for season
   if(random.season==0){
     form.pca<-as.formula(paste0('outcome.pre~',paste(names(season.dummies), collapse="+") ,'+pca1 +(1|obs)'  ) )
-    stan_mod<- stan_glmer(form.pca, data=covar.matrix.pca, cores=4, chains=4 , family=poisson(link='log'))
-    all.preds.pca<- t(posterior_predict(stan_mod, newdata=covar.matrix.pca[,-1]))
-    }else{
-      form.pca<-as.formula(paste0('outcome.pre~','pca1 +(1|obs) +(1|month.fac)'  )  )    
-      # form.pca<-as.formula(paste0('outcome.pre~',paste(names(season.dummies), collapse="+") ,'+pca1 +(1|obs)'  ) )
-      all.preds.pca<- t(posterior_predict(stan_mod, newdata=covar.matrix.pca[,-1]),re.form= ~(1|month.fac))
-     all.preds.pca<-simulate(mod1, nsim=10000, newdata=covar.matrix.pca, allow.new.levels=TRUE,re.form= ~(1|month.fac))
-}
-preds.q.pca<-t(apply(all.preds.pca, 1,quantile, probs=c(0.025,0.5,0.975)))
-rr.post.t.pca[[k]]<- outcome/preds.q.pca
-
-#rr during eval period from PCA model
-post.preds.pca<-all.preds.pca[eval.start.index:nrow(all.preds),]
-post.preds.sums.pca<-apply(post.preds.pca,2,sum)
-post.obs.sum<-sum(outcome[eval.start.index:nrow(all.preds)])
-post.rr.pca<-post.obs.sum/post.preds.sums.pca
-rr.post.q.pca[[k]]<-quantile(post.rr.pca,probs=c(0.025,0.5,0.975))
-rr.mean.post.mod.pca<-rr.post.q.pca[[k]]
-
-#point estimate for RR for each model
-log_rr_full_t.pca<-log((outcome+0.5)/(all.preds.pca+0.5))
-log_rr_full_t_quantiles.pca<-apply(log_rr_full_t.pca,1, quantile, probs=c(0.025,0.5,0.975))
-log_rr_full_t_sd.pca<-t(apply(log_rr_full_t.pca, 1, sd, na.rm = TRUE))
-log_rr_full_t_samples.covar.pca<-cov(t(log_rr_full_t.pca))
-log_rr_full_t_samples.prec.pca<-solve(log_rr_full_t_samples.covar.pca)
-quantiles[[k]]<-list(rr.mean.post.mod, outcome, log_rr_full_t_quantiles, log_rr_full_t_sd,log_rr_full_t_samples.prec,model.weight,
-                     rr.mean.post.mod.pca, log_rr_full_t_quantiles.pca, log_rr_full_t_sd.pca,log_rr_full_t_samples.prec.pca)
-names(quantiles[[k]])<- c('rr.mean.post.mod', 'outcome', 'log_rr_full_t_quantiles', 'log_rr_full_t_sd','log_rr_full_t_samples.prec','model.weight',
-                          'rr.mean.post.mod.pca', 'log_rr_full_t_quantiles.pca', 'log_rr_full_t_sd.pca','log_rr_full_t_samples.prec.pca')
-##################################
-##################################
-#STEP 5: PLOT RESULTS
-pdf(paste0(output_directory, 'plots_', country,strata.label,SES_VAR, ".pdf"), width=7, height=5)
-
-#Plot observed vs expected +/- 95% CI
-matplot(preds.q.pca, type='l', lty=c(2,1,2), col='black', bty='l', ylim=c(0,max(preds.q)))
-points(outcome)
-abline(v=post.start.index,col='gray', lty=2)
-title(paste0(reg.names[k]," STL+PCA: Observed vs expected"))
-
-matplot(preds.q, type='l', lty=c(2,1,2), col='black', bty='l', ylim=c(0,max(preds.q)))
-points(outcome)
-abline(v=post.start.index,col='gray', lty=2)
-title(paste0(reg.names[k]," STL+BMA: Observed vs expected"))
-
-matplot(preds.q.pca, type='l', col='#af8dc3', lty=1, bty='l')
-points(outcome)
-points(preds.q[,'50%'], lty=1, col='#7fbf7b',type='l' )
-points(preds.q[,'2.5%'], lty=2, col='#7fbf7b',type='l' )
-points(preds.q[,'97.5%'], lty=2, col='#7fbf7b',type='l' )
-abline(v=post.start.index,col='gray', lty=2)
-title("Comparison of STL+BMA (green) with STL+PCA (purple)")
-
-matplot(t(log_rr_full_t_quantiles.pca),  type='l', lty=c(2,1,2), ylim=c(-1,1),col='black', bty='l', ylab="Log(Rate Ratio)")
-abline(h=0, col='gray', lty=2)
-abline(v=post.start.index,col='gray', lty=2) 
-title("STL+PCA:Log rate ratios")
-
-matplot(t(log_rr_full_t_quantiles),  type='l', lty=c(2,1,2), ylim=c(-1,1), col='black', bty='l', ylab="Log(Rate Ratio)")
-abline(h=0, col='gray', lty=2)
-abline(v=post.start.index,col='gray', lty=2) 
-title("STL+BMA:Log rate ratios")
-
-#
-#Plot expected from individual models vs observed
-col.plot<-rgb(0,0,0, alpha=aic.df$w_aic)
-#All preds
-matplot(pred.mean, type='l', col='gray', lty=1, bty='l')
-points(outcome)
-abline(v=post.start.index,col='gray', lty=2)
-title("Predictions from individual variables")
-
-#by weight
-matplot(pred.mean, type='l', col=col.plot, lty=1, bty='l')
-points(outcome)
-abline(v=post.start.index,col='gray', lty=2)
-title("Predictions from individual variables; weighted by fit")
-
-
-
-dev.off()
-
-
-
-## MAKE THE INTERACTIVE PLOTLY PLOTS
-aic.df<-aic.df[order(aic.df$model.rank),]
-aic.df.plot<-aic.df[aic.df$covars %in% c('t',top.covars), ]
-aic.df.plot$model.rank=rank(aic.df.plot$model.rank)
-model_weights_2<-aic.df.plot$w_aic
-model_weights_2[aic.df.plot$w_aic<0.03]=0.03 #set a minimum threshold for weights so that even 0 weighted lines show up faintly
-mods.covars<-names(covars)
-format.mods.covars<-paste(round(rr.mean.post.mod,2) )
-
-col.plot<-rgb(0,0,0, alpha=model_weights_2)
-plot.order<- aic.df.plot$model.rank
-n.plot<-sum(aic.df.plot$keep.high.weight) #how many covars contriubuted to 99% of weight?
-n.plot<-min(n.plot,50) #limit to number of lines plotted
-outcome.list<-outcome
-pred.mean.plot<-as.data.frame(pred.mean)
-names(pred.mean.plot)<-dimnames(predictors)[[2]]
+    mod1<-glmer(form.pca ,data=covar.matrix.pca, family=poisson(link=log) )
+    #GENERATE PREDICTIONS
+    covars3<-as.matrix(covar.matrix.pca[c(names(season.dummies),'pca1')])
+    covars3<-cbind.data.frame(rep(1, times=nrow(covars3)), covars3)
+    names(covars3)[1]<-"Intercept"
+    pred.coefs.reg.mean<- mvrnorm(n = 100, mu=fixef(mod1), Sigma=vcov( mod1))
+    preds.stage1.regmean<- as.matrix(covars3) %*% t(pred.coefs.reg.mean)
+    re.sd<-as.numeric(sqrt(VarCorr(mod1)[[1]]))
+    preds.stage1<-rnorm(n<-length(preds.stage1.regmean), mean=preds.stage1.regmean, sd=re.sd)
+    preds.stage1<-matrix(preds.stage1, nrow=nrow(preds.stage1.regmean), ncol=ncol(preds.stage1.regmean))
+    preds.stage2<-rpois(n=preds.stage1*100, exp(preds.stage1))
+    all.preds.pca<-matrix(preds.stage2, nrow=nrow(preds.stage1), ncol=ncol(preds.stage1)*100)
+  }else{
+    form.pca<-as.formula(paste0('outcome.pre~','pca1 +(1|obs) +(1|month.fac)'  )  )    
+    # form.pca<-as.formula(paste0('outcome.pre~',paste(names(season.dummies), collapse="+") ,'+pca1 +(1|obs)'  ) )
+    all.preds.pca<- t(posterior_predict(stan_mod, newdata=covar.matrix.pca[,-1]),re.form= ~(1|month.fac))
+    all.preds.pca<-simulate(mod1, nsim=10000, newdata=covar.matrix.pca, allow.new.levels=TRUE,re.form= ~(1|month.fac))
+  }
+  preds.q.pca<-t(apply(all.preds.pca, 1,quantile, probs=c(0.025,0.5,0.975)))
+  rr.post.t.pca[[k]]<- outcome/preds.q.pca
   
-plotlies <- plot_ly(x = ~time_points, y = ~outcome.list, type = 'scatter', mode = 'markers')%>%
-  layout(
-    yaxis=list(rangemode='tozero')
-  )
-
-for(i in 1:n.plot ) {
-  cov.plot<-as.character(aic.df.plot$covars[i])
-  format.rr.covars<-paste(round(rr.post.covar[cov.plot],2) )
+  #rr during eval period from PCA model
+  post.preds.pca<-all.preds.pca[eval.start.index:nrow(all.preds),]
+  post.preds.sums.pca<-apply(post.preds.pca,2,sum)
+  post.obs.sum<-sum(outcome[eval.start.index:nrow(all.preds)])
+  post.rr.pca<-post.obs.sum/post.preds.sums.pca
+  rr.post.q.pca[[k]]<-quantile(post.rr.pca,probs=c(0.025,0.5,0.975))
+  rr.mean.post.mod.pca<-rr.post.q.pca[[k]]
   
-  plotlies <- add_trace(plotlies,x=time_points,y = pred.mean.plot[,cov.plot] ,name = cov.plot,  mode = "lines",
-                        evaluate = TRUE,line = list(color = col.plot[i]),  hoverinfo = 'text',
-                        text = paste0(cov.plot, " RR:", format.rr.covars," Weight ",round(aic.df.plot$w_aic,2)[i]))  
-}           
-plotlies <- add_trace(plotlies,x=time_points,y = preds.q.pca[,'50%'] ,name = "STL+PCA",  mode = "lines",
-                      evaluate = TRUE,line = list(color = 'red'),  hoverinfo = 'text',
-                      text = paste0('STL+PCA', " RR:",round(rr.mean.post.mod.pca['50%'],2) ))  
-out.html<-file.path( paste0(output_directory,'plottly.plots.', country,strata.label, SES_VAR, '.html'))
-htmlwidgets::saveWidget(plotlies, out.html)
-
+  #point estimate for RR for each model
+  log_rr_full_t.pca<-log((outcome+0.5)/(all.preds.pca+0.5))
+  log_rr_full_t_quantiles.pca<-apply(log_rr_full_t.pca,1, quantile, probs=c(0.025,0.5,0.975))
+  log_rr_full_t_sd.pca<-t(apply(log_rr_full_t.pca, 1, sd, na.rm = TRUE))
+  log_rr_full_t_samples.covar.pca<-cov(t(log_rr_full_t.pca))
+  log_rr_full_t_samples.prec.pca<-solve(log_rr_full_t_samples.covar.pca)
+  quantiles[[k]]<-list(rr.mean.post.mod, outcome, log_rr_full_t_quantiles, log_rr_full_t_sd,log_rr_full_t_samples.prec,model.weight,
+                       rr.mean.post.mod.pca, log_rr_full_t_quantiles.pca, log_rr_full_t_sd.pca,log_rr_full_t_samples.prec.pca)
+  names(quantiles[[k]])<- c('rr.mean.post.mod', 'outcome', 'log_rr_full_t_quantiles', 'log_rr_full_t_sd','log_rr_full_t_samples.prec','model.weight',
+                            'rr.mean.post.mod.pca', 'log_rr_full_t_quantiles.pca', 'log_rr_full_t_sd.pca','log_rr_full_t_samples.prec.pca')
+  ##################################
+  ##################################
+  #STEP 5: PLOT RESULTS
+  pdf(paste0(output_directory, 'plots_', country,strata.label,SES_VAR, ".pdf"), width=7, height=5)
+  
+  #Plot observed vs expected +/- 95% CI
+  matplot(preds.q.pca, type='l', lty=c(2,1,2), col='black', bty='l', ylim=c(0,max(preds.q)))
+  points(outcome)
+  abline(v=post.start.index,col='gray', lty=2)
+  title(paste0(reg.names[k]," STL+PCA: Observed vs expected"))
+  
+  matplot(preds.q, type='l', lty=c(2,1,2), col='black', bty='l', ylim=c(0,max(preds.q)))
+  points(outcome)
+  abline(v=post.start.index,col='gray', lty=2)
+  title(paste0(reg.names[k]," STL+BMA: Observed vs expected"))
+  
+  matplot(preds.q.pca, type='l', col='#af8dc3', lty=1, bty='l')
+  points(outcome)
+  points(preds.q[,'50%'], lty=1, col='#7fbf7b',type='l' )
+  points(preds.q[,'2.5%'], lty=2, col='#7fbf7b',type='l' )
+  points(preds.q[,'97.5%'], lty=2, col='#7fbf7b',type='l' )
+  abline(v=post.start.index,col='gray', lty=2)
+  title("Comparison of STL+BMA (green) with STL+PCA (purple)")
+  
+  matplot(t(log_rr_full_t_quantiles.pca),  type='l', lty=c(2,1,2), ylim=c(-1,1),col='black', bty='l', ylab="Log(Rate Ratio)")
+  abline(h=0, col='gray', lty=2)
+  abline(v=post.start.index,col='gray', lty=2) 
+  title("STL+PCA:Log rate ratios")
+  
+  matplot(t(log_rr_full_t_quantiles),  type='l', lty=c(2,1,2), ylim=c(-1,1), col='black', bty='l', ylab="Log(Rate Ratio)")
+  abline(h=0, col='gray', lty=2)
+  abline(v=post.start.index,col='gray', lty=2) 
+  title("STL+BMA:Log rate ratios")
+  
+  #
+  #Plot expected from individual models vs observed
+  col.plot<-rgb(0,0,0, alpha=aic.df$w_aic)
+  #All preds
+  matplot(pred.mean, type='l', col='gray', lty=1, bty='l')
+  points(outcome)
+  abline(v=post.start.index,col='gray', lty=2)
+  title("Predictions from individual variables")
+  
+  #by weight
+  matplot(pred.mean, type='l', col=col.plot, lty=1, bty='l')
+  points(outcome)
+  abline(v=post.start.index,col='gray', lty=2)
+  title("Predictions from individual variables; weighted by fit")
+  
+  
+  
+  dev.off()
+  
+  
+  
+  ## MAKE THE INTERACTIVE PLOTLY PLOTS
+  aic.df<-aic.df[order(aic.df$model.rank),]
+  aic.df.plot<-aic.df[aic.df$covars %in% c('t',top.covars), ]
+  aic.df.plot$model.rank=rank(aic.df.plot$model.rank)
+  model_weights_2<-aic.df.plot$w_aic
+  model_weights_2[aic.df.plot$w_aic<0.03]=0.03 #set a minimum threshold for weights so that even 0 weighted lines show up faintly
+  mods.covars<-names(covars)
+  format.mods.covars<-paste(round(rr.mean.post.mod,2) )
+  
+  col.plot<-rgb(0,0,0, alpha=model_weights_2)
+  plot.order<- aic.df.plot$model.rank
+  n.plot<-sum(aic.df.plot$keep.high.weight) #how many covars contriubuted to 99% of weight?
+  n.plot<-min(n.plot,50) #limit to number of lines plotted
+  outcome.list<-outcome
+  pred.mean.plot<-as.data.frame(pred.mean)
+  names(pred.mean.plot)<-dimnames(predictors)[[2]]
+  
+  plotlies <- plot_ly(x = ~time_points, y = ~outcome.list, type = 'scatter', mode = 'markers')%>%
+    layout(
+      yaxis=list(rangemode='tozero')
+    )
+  
+  for(i in 1:n.plot ) {
+    cov.plot<-as.character(aic.df.plot$covars[i])
+    format.rr.covars<-paste(round(rr.post.covar[cov.plot],2) )
+    
+    plotlies <- add_trace(plotlies,x=time_points,y = pred.mean.plot[,cov.plot] ,name = cov.plot,  mode = "lines",
+                          evaluate = TRUE,line = list(color = col.plot[i]),  hoverinfo = 'text',
+                          text = paste0(cov.plot, " RR:", format.rr.covars," Weight ",round(aic.df.plot$w_aic,2)[i]))  
+  }           
+  plotlies <- add_trace(plotlies,x=time_points,y = preds.q.pca[,'50%'] ,name = "STL+PCA",  mode = "lines",
+                        evaluate = TRUE,line = list(color = 'red'),  hoverinfo = 'text',
+                        text = paste0('STL+PCA', " RR:",round(rr.mean.post.mod.pca['50%'],2) ))  
+  out.html<-file.path( paste0(output_directory,'plottly.plots.', country,strata.label, SES_VAR, '.html'))
+  htmlwidgets::saveWidget(plotlies, out.html)
+  
 }
 
 names(quantiles)<-reg.names
