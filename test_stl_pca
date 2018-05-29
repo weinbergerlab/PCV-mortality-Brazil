@@ -517,7 +517,7 @@ rr.bma<-cbind.data.frame(reg.names,rr.bma)
 rr.pca<-do.call(rbind, lapply(quantiles,function(xl) xl$'rr.mean.post.mod.pca') )
 rr.pca<-cbind.data.frame(reg.names,rr.pca)
 write.csv(rr.bma,paste0(output_directory,'rr.bma.' ,SES_VAR,'.csv'))
-write.csv(rr.bma,paste0(output_directory,'rr.pca.' ,SES_VAR,'.csv'))
+write.csv(rr.pca,paste0(output_directory,'rr.pca.' ,SES_VAR,'.csv'))
 
 rr.pca
 #rr.bma
