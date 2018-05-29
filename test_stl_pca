@@ -7,8 +7,8 @@ require(devtools)
 #install.packages('abind')
 require(abind)
 
-#read in function file--can read directly from github using devtools function 'source_url'
-source_url("https://raw.githubusercontent.com/weinbergerlab/Brazil_hospital_state/master/functions%20glm%20aic%20mod%20ave.R")      
+#read in function file--can read directly from github
+source_url("https://raw.githubusercontent.com/weinbergerlab/Brazil_state/master/functions%20glm%20aic%20mod%20ave.R")      
 #source('functions glm aic mod ave.R')
 
 packages <- c('RCurl','reshape2','RColorBrewer','matlib','lme4','rstanarm', 'dummy','knitr','plotly','MASS', 'parallel','splines', 'lubridate','devtools')
@@ -25,9 +25,7 @@ if(.Platform$OS.type == "windows") {
 
 setwd(desktop)
 
-#read in function file--can read directly from github
-source_url("https://raw.githubusercontent.com/weinbergerlab/Brazil_state/master/functions%20glm%20aic%20mod%20ave.R")      
-#source('functions glm aic mod ave.R')
+
 
 ###############USER SPECIFIED VALUES
 country="Brazil_mort"
