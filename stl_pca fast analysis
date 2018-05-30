@@ -1,45 +1,45 @@
-# Clear workspace to get rid of old junk
-#rm(list=ls(all=TRUE))
-
-#These 2 packages need to be installed and loaded first
-#install.packages('devtools')
-require(devtools)
-#install.packages('abind')
-require(abind)
-
-#read in function file--can read directly from github
-source_url("https://raw.githubusercontent.com/weinbergerlab/Brazil_state/master/functions%20glm%20aic%20mod%20ave.R")      
-#source('functions glm aic mod ave.R')
-
-packages <- c('RCurl','reshape2','RColorBrewer','matlib','lme4','rstanarm', 'dummy','knitr','plotly','MASS', 'parallel','splines', 'lubridate','devtools')
-packageHandler(packages, update_packages = FALSE, install_packages = FALSE) #change to true if need to install any
-sapply(packages, library, quietly = TRUE, character.only = TRUE)
-
-
-#Set working directory: default to desktop--different path for windows vs Mac
-if(.Platform$OS.type == "windows") {
-  desktop<-file.path(Sys.getenv("USERPROFILE"),"Desktop")
-} else {
-  desktop<- "~/Desktop"
-}
-
-setwd(desktop)
-
-
-
-###############USER SPECIFIED VALUES
-country="Brazil_mort"
-all_cause_name <- 'NoPCV'
-all_cause_pneu_name <- 'J12_J18'
-strata_name<-"age_group"
-date_name<-'date'
-data_start_date <- as.Date('2004-01-01')   #When do you want the analysis to start? (yyyy-mm-01)
-data_intervention_start<-as.Date('2010-01-01')   #When is the intervention introduced?  (yyyy-mm-01)
-n_seasons=4 #12 for monthly, 4 for quarterly, 3 for triannually
-N.sim=10000 #total number of random draws for the predictive distribution
-N.buffer=24 #How many months before start evaluation?
-SES_VAR='HDI'  #Can be: "poverty", "education", "HDI", "national"
-#################################################
+# # Clear workspace to get rid of old junk
+# #rm(list=ls(all=TRUE))
+# 
+# #These 2 packages need to be installed and loaded first
+# #install.packages('devtools')
+# require(devtools)
+# #install.packages('abind')
+# require(abind)
+# 
+# #read in function file--can read directly from github
+# source_url("https://raw.githubusercontent.com/weinbergerlab/Brazil_state/master/functions%20glm%20aic%20mod%20ave.R")      
+# #source('functions glm aic mod ave.R')
+# 
+# packages <- c('RCurl','reshape2','RColorBrewer','matlib','lme4','rstanarm', 'dummy','knitr','plotly','MASS', 'parallel','splines', 'lubridate','devtools')
+# packageHandler(packages, update_packages = FALSE, install_packages = FALSE) #change to true if need to install any
+# sapply(packages, library, quietly = TRUE, character.only = TRUE)
+# 
+# 
+# #Set working directory: default to desktop--different path for windows vs Mac
+# if(.Platform$OS.type == "windows") {
+#   desktop<-file.path(Sys.getenv("USERPROFILE"),"Desktop")
+# } else {
+#   desktop<- "~/Desktop"
+# }
+# 
+# setwd(desktop)
+# 
+# 
+# 
+# ###############USER SPECIFIED VALUES
+# country="Brazil_mort"
+# all_cause_name <- 'NoPCV'
+# all_cause_pneu_name <- 'J12_J18'
+# strata_name<-"age_group"
+# date_name<-'date'
+# data_start_date <- as.Date('2004-01-01')   #When do you want the analysis to start? (yyyy-mm-01)
+# data_intervention_start<-as.Date('2010-01-01')   #When is the intervention introduced?  (yyyy-mm-01)
+# n_seasons=4 #12 for monthly, 4 for quarterly, 3 for triannually
+# N.sim=10000 #total number of random draws for the predictive distribution
+# N.buffer=24 #How many months before start evaluation?
+# SES_VAR='HDI'  #Can be: "poverty", "education", "HDI", "national"
+# #################################################
 
 bivariate=FALSE  #two control variables or 1 in regression?
 season.control='dummy'  #can either by 'harmonic' or 'dummy'
