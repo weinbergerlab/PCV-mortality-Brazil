@@ -5,7 +5,7 @@ PCV-mortality-Brazil using either synthetic controls or STL+PCA method (https://
 The code and datasets in this repository are used to evaluate the impact of pneumococcal conjugate vaccines on the incidence of
 pneumonia deaths. The synthetic_control_run.R file is the only one that you should need to interact with to change the input datasets. The _functions.r and _analysis.R files can be edited to change additional parameters.
 
-the stl+pca RUN file can be used to run the analyses
+the stl+pca RUN file can be used to run the STL+PCA analyses for sparse data
 
 There are 4 datasets: national.csv includes data for all of Brazil. education.csv, HDI.csv, and poverty.csv aggregate municipal-level data based on Human Development Index (HDI), maternal educational attainment (education.csv) and poverty level (poverty.csv). Municipal HDI data were from the United Nations Development Programme for Brazil (UNDP, 2013); data on percentage of children in extreme poverty (monthly per capita income <$40 US) and the proportion of mothers with no primary education were from the Brazilian Institute of Geography and Statistics (“Brazilian Institute of Geography and Statistics,” n.d.) For HDI, we formed groups based on UN-defined categories for countries: very low/low (< 0.60), medium (0.60 to < 0.70), and high/very high (≥ 0.70). For percent children in poverty, we defined low SES as >27 percent of children from the municipality living in extreme poverty, high SES as <3 percent. For maternal education, we defined low SES as >30 percent with no primary education, and high SES as <10 percent. Details of the stratification procedure are available in the Supplementary Methods. 
 
