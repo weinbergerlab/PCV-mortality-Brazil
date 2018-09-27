@@ -33,7 +33,7 @@ output_directory <- paste(output_directory, format(Sys.time(), '%Y-%m-%d-%H%M%S'
 file_name        <- 'HDI.csv'                                                                       #Name of file containing data for analysis. Must be a .csv file.
 data_file <- paste0(input_directory, file_name)
 prelog_data <- read.csv(text=getURL(data_file), check.names = FALSE)# IF IMPORTING FROM URL
-
+year_def          <-     'cal_year'  #Can be cal_year to aggregate results by Jan-Dec; 'epi_year' to aggregate July-June
 
 group_name   <- 'age_group' #Name of column containing group labels.
 date_name    <- 'date'      #Name of column containing dates.
